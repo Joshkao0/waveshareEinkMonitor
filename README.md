@@ -2,8 +2,7 @@ NOTE
 Code was made for the ESP32S3 Epaper 1.54 Inch V2  !!!!!!
 You only need to edit your time and date in and then hit upload nothing else
 No comment or uncomment 
-
-
+NOTE 2 the years is Buggy
 
 Step 1
 unplug Battery
