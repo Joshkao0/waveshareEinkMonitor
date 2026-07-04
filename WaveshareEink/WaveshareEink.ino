@@ -39,6 +39,12 @@ int h,m=0;  // hour, minute
 int voltageSegments=0;
 String hourStr,minStr,tmp,hum2,tt,dateString; // temperature, humidity
 String days[7]={"SU","MO","TU","WE","TH","FR","SA"};
+
+// survives deep sleep (RTC slow memory) -> RTC wird nur beim allerersten
+// Start gestellt, danach läuft sie einfach weiter
+RTC_DATA_ATTR bool rtcTimeIsSet = false;
+
+int readBatteryVoltage(); // prototype
 // ----------- EPD full refresh  -----------
 
 
@@ -147,9 +153,13 @@ void setup() {
   Wire.begin(I2C_SDA, I2C_SCL);
   rtc.begin();
 
-  // set rtc
-  //rtc.setDate(5, 19, 9, 2025);                     // NOTE: weekday first
-  //rtc.setTime(19, 57, 15);
+  // RTC nur beim allerersten Boot stellen, sonst läuft die Zeit nach
+  // jedem Deep-Sleep-Zyklus einfach weiter, statt zurückgesetzt zu werden
+  if (!rtcTimeIsSet) {
+    rtc.setDate(6, 4, 7, 2026);                   // NOTE: weekday first
+    rtc.setTime(0, 4, 15);             //<---- edit this part and the date and then upload no comment and uncomment  
+    rtcTimeIsSet = true;
+  }
 
   h = rtc.getHour();
   m = rtc.getMinute();
@@ -170,7 +180,7 @@ void setup() {
   tmp=String(temp.temperature);
   hum2=String(hum.relative_humidity);
   
-  voltageSegments=map(readBatteryVoltage(),3100,4200,0,5);
+  voltageSegments=constrain(map(readBatteryVoltage(),3100,4200,0,5),0,5);
   
   //draw content on screen
   epdDraw();
@@ -178,14 +188,14 @@ void setup() {
   // lets prepare to sleep for 60 sec
   display.hibernate();
   digitalWrite(EPD_PWR,1);
-  gpio_hold_en((gpio_num_t)VBAT_PWR);   // drži EPD_PWR u OFF stanju
-  gpio_hold_en((gpio_num_t)EPD_PWR); 
+  gpio_hold_en((gpio_num_t)VBAT_PWR);   // hält VBAT_PWR im aktuellen (ON) Zustand
+  gpio_hold_en((gpio_num_t)EPD_PWR);    // hält EPD_PWR im aktuellen (OFF) Zustand
   gpio_deep_sleep_hold_en();
   delay(5);
  
   // MCU deep sleep 
   esp_sleep_enable_timer_wakeup((uint64_t)SLEEP_SECONDS * 1000000ULL);
-  esp_deep_sleep_start();
+  esp_deep_sleep_start();   // <-- das hat gefehlt: ohne diesen Aufruf schläft der ESP32 NIE ein
 }
 
 int readBatteryVoltage()
